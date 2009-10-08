@@ -1,0 +1,7 @@
+# Drupal site directories
+sites/default/
+
+# Zend project files
+.settings/
+.cache/
+.project
