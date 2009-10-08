@@ -1,0 +1,3 @@
+[submodule "sites/all/modules/email_filefield"]
+	path = sites/all/modules/email_filefield
+	url = git://github.com/collectivecolors/drupal-modules-email_filefield.git
