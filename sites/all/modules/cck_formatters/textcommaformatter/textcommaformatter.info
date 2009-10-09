@@ -1,0 +1,13 @@
+; $Id: textcommaformatter.info,v 1.1.2.2 2008/07/22 15:52:32 crell Exp $
+name = Text with comma
+description = Provides a formatter for CCK text fields to render multi-value fields comma-delimited.
+dependencies[] = text
+package = CCK
+core = 6.x
+
+; Information added by drupal.org packaging script on 2008-10-14
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "cck_formatters"
+datestamp = "1223942527"
+

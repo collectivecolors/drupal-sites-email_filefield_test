@@ -1,0 +1,47 @@
+<?php
+// ; $Id: textcommaformatter.module,v 1.2.2.3 2008/10/13 22:05:10 crell Exp $
+
+/**
+ * Implementation of hook_field_formatter_info(),.
+ */
+function textcommaformatter_field_formatter_info() {
+  return array(
+    'text_comma' => array(
+      'label' => t('Comma-separated'),
+      'field types' => array('text'),
+      'multiple values' => CONTENT_HANDLE_MODULE,
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function textcommaformatter_theme() {
+  return array(
+    'textcommaformatter_formatter_text_comma' => array(
+      'arguments' => array('element' => NULL),
+    ),
+  );
+}
+
+/**
+ * Theme a textfield as a comma-separated list.
+ *
+ * @ingroup themeable
+ */
+function theme_textcommaformatter_formatter_text_comma($element) {
+  $values = array();
+  
+  $item = $element;
+  foreach (element_children($element) as $key) {
+    unset($item[$key]);
+  }
+  
+  foreach (element_children($element) as $key) {
+    $item['#item'] = $element[$key]['#item'];
+    $values[] = ($allowed =_text_allowed_values($item)) ? $allowed : $item['#item']['safe'];
+  }
+  
+  return implode(', ', $values);
+}

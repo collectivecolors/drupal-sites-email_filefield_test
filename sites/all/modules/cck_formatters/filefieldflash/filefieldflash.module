@@ -1,0 +1,63 @@
+<?php
+// $Id: filefieldflash.module,v 1.1.4.2 2008/10/13 21:30:26 crell Exp $
+
+/**
+* Implementation of hook_field_formatter_info().
+*/
+function filefieldflash_field_formatter_info() {
+  return array(
+    'flash_or_image' => array(
+      'label' => t('As Flash (SWF file)'),
+      'field types' => array('filefield'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function filefieldflash_theme() {
+  return array(
+    'filefieldflash_formatter_flash_or_image' => array(
+      'arguments' => array('element' => NULL),
+    ),
+  );
+}
+
+/**
+ * Formatter theme function for file fields presented as either Flash movie objects,
+ * utilizing the swfobjectapi, or images.
+ * 
+ * @ingroup themeable
+ */
+function theme_filefieldflash_formatter_flash_or_image($element) {
+  $item = $element['#item'];
+
+  if (!empty($item['filepath'])) {
+    if($item['filemime'] == 'application/x-shockwave-flash') {
+      // Flash files get special treatment.
+      
+      list($width, $height, $type, $attr) = getimagesize($item['filepath']);
+      $params = array(
+        'class' => 'filefieldflash',
+        'width' => $width, 
+        'height' => $height,
+      );
+      $vars = array();
+      
+      $file_url = file_create_url($item['filepath']);
+      
+      return theme('swfobject_api', $file_url, $params, $vars);
+    }
+    elseif (in_array($item['filemime'], array('image/png', 'image/jpeg', 'image/gif'))) {
+      // Just show image files normally.
+      return theme('image', $item['filepath'], $item['description'], $item['description']);
+    }
+    else {
+      // Fall back to filefield's default behavior.
+      return theme('filefield_formatter_default', $element);
+    }
+  }
+}
+

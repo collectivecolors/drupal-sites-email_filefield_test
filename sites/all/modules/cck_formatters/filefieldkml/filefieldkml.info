@@ -1,0 +1,10 @@
+; $Id $
+name = Filefield KML formatter
+description = Formats a KML file as a Google Map.
+depends = filefield gmap
+; Information added by drupal.org packaging script on 2008-10-14
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "cck_formatters"
+datestamp = "1223942527"
+

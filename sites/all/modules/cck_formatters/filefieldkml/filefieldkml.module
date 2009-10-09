@@ -1,0 +1,112 @@
+<?php
+
+/**
+* Declare information about a formatter.
+*
+* @return
+*   An array keyed by formatter name. Each element of the array is an associative
+*   array with these keys and values:
+*   - "label": The human-readable label for the formatter.
+*   - "field types": An array of field type names that can be displayed using
+*     this formatter.
+*/
+function filefieldkml_field_formatter_info() {
+  return array(
+    'kml_google' => array(
+      'label' => t('As Google Map (KML file)'),
+      'field types' => array('file'),
+    ),
+  );
+}
+
+/**
+* Prepare an individual item for viewing in a browser.
+*
+* @param $field
+*   The field the action is being performed on.
+* @param $item
+*   An array, keyed by column, of the data stored for this item in this field.
+* @param $formatter
+*   The name of the formatter being used to display the field.
+* @param $node
+*   The node object, for context. Will be NULL in some cases.
+*   Warning : when displaying field retrieved by Views, $node will not
+*   be a "full-fledged" node object, but an object containg the data returned
+*   by the Views query (at least nid, vid, changed)
+* @return
+*   An HTML string containing the formatted item.
+*
+* In a multiple-value field scenario, this function will be called once per
+* value currently stored in the field. This function is also used as the handler
+* for viewing a field in a views.module tabular listing.
+*
+* It is important that this function at the minimum perform security
+* transformations such as running check_plain() or check_markup().
+*/
+function filefieldkml_field_formatter($field, $item, $formatter, $node) {
+  
+  $theme_function = 'filefieldkml_field_formatter_'. $formatter;
+  $args = array($theme_function, $field, $item, $formatter, $node);
+  return call_user_func_array('theme', $args);
+}
+
+/**
+ * Formatter theme function for file fields presented as a KML Google map.
+ * 
+ * The parameters are identical to hook_field_formatter().
+ * 
+ * The only return value from this function is the GMap placeholder div.  Everything
+ * else is queued up in Javascript settings for later usage.
+ * 
+ * @ingroup themeable
+ * @see hook_field_formatter().
+ */
+function theme_filefieldkml_field_formatter_kml_google($field, $item, $formatter, $node) {
+  static $counter = 0;
+  
+  if(!empty($item['fid'])) {
+    $item  =  array_merge($item, _filefield_file_load($item['fid']));
+  }
+  if (!empty($item['filepath'])) {
+    
+    _filefieldkml_header();
+    
+    $defaults = gmap_defaults();
+    
+    $map_id = 'filefield-kml-'. $counter++;
+    $settings['filefieldkml'][$map_id] = $defaults;
+    $settings['filefieldkml'][$map_id]['kmlFile'] = file_create_url($item['filepath']);
+
+    drupal_add_js($settings, 'setting');
+    
+    //dsm($settings);
+    
+    return "<div id='{$map_id}' style='width: {$defaults['width']}; height: {$defaults['height']};'></div>";
+  }
+}
+
+/**
+ * Sets up the Javascript and Google registration required for this formatter.
+ * 
+ * This function implements its own semaphore.
+ */
+function _filefieldkml_header() {
+  static $completed = FALSE;
+  if ($completed) {
+    return;
+  }
+  
+  $key = variable_get('googlemap_api_key', '');
+  
+  // drupal_add_js() doesn't allow off-site JS, so we have to do it manually.
+  drupal_set_html_head("<script type='text/javascript' src='http://maps.google.com/maps?file=api&amp;v=2&amp;key={$key}'></script>");
+  drupal_add_js(drupal_get_path('module', 'filefieldkml') . '/filefieldkml.js', 'module');
+  
+  $key = variable_get('googlemap_api_key', '');
+  if (module_exists('keys_api')) {
+    $key = keys_api_get_key('gmap', $_SERVER['HTTP_HOST']);
+  }
+  drupal_set_html_head('<script src="http://maps.google.com/maps?file=api&amp;v='. GMAP_API_V .'&amp;key='. $key .'" type="text/javascript"></script>');
+  
+  $completed = TRUE;
+}

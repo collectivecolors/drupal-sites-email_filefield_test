@@ -1,0 +1,13 @@
+; $Id $
+name = Filefield Flash Formatter
+description = "Formats Flash (swf) files nicely using the SWFObject module; also handles GIF, JPG, and PNGs."
+dependencies[] = filefield
+;dependencies[] = swfobject_api
+package = CCK
+core = 6.x
+; Information added by drupal.org packaging script on 2008-10-14
+version = "6.x-1.x-dev"
+core = "6.x"
+project = "cck_formatters"
+datestamp = "1223942527"
+
