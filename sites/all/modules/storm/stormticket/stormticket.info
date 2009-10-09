@@ -1,0 +1,17 @@
+; $Id: stormticket.info,v 1.4.4.1 2009/05/06 19:12:11 magnity Exp $
+name = Storm Ticket
+description = "Allows creation of tickets for Storm Projects and Tasks"
+dependencies[] = storm 
+dependencies[] = stormattribute
+dependencies[] = stormorganization
+dependencies[] = stormproject
+dependencies[] = stormtask
+package = Storm
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-08-21
+version = "6.x-1.24"
+core = "6.x"
+project = "storm"
+datestamp = "1250814081"
+

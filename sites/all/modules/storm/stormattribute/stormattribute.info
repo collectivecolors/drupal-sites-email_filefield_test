@@ -1,0 +1,17 @@
+; $Id: stormattribute.info,v 1.3.4.2 2009/08/20 23:57:22 magnity Exp $
+
+; Basic information
+name = Storm Attribute
+description = "Provides attributes (allowed field values) for use within Storm modules"
+core = 6.x
+package = Storm
+
+; Dependencies
+dependencies[] = storm
+
+; Information added by drupal.org packaging script on 2009-08-21
+version = "6.x-1.24"
+core = "6.x"
+project = "storm"
+datestamp = "1250814081"
+

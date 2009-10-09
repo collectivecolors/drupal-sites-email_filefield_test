@@ -1,0 +1,40 @@
+<?php
+// $Id: stormperson.install,v 1.2.4.2 2009/07/10 14:49:34 magnity Exp $
+
+/**
+ * @file
+ */
+
+function stormperson_install() {
+  drupal_install_schema('stormperson');
+  variable_set('node_options_stormperson', array('status'));
+}
+
+function stormperson_disable() {
+  drupal_set_message(t('Warning: Nodes of type "Person" have not been deleted on disabling Storm Person. Please note that they will now have reduced functionality, and will not be protected by Storm Person access controls.', 'warning'));
+}
+
+function stormperson_uninstall() {
+  drupal_uninstall_schema('stormperson');
+}
+
+function stormperson_schema() {
+  $schema['stormperson'] = array(
+    'fields'                => array(
+      'vid'                 => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'nid'                 => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'organization_nid'    => array('type' => 'int'),
+      'organization_title'  => array('type' => 'varchar', 'length' => 150),
+      'prefix'              => array('type' => 'varchar', 'length' => 100),
+      'fullname'            => array('type' => 'varchar', 'length' => 100),
+      'email'               => array('type' => 'varchar', 'length' => 50),
+      'www'                 => array('type' => 'varchar', 'length' => 100),
+      'phone'               => array('type' => 'varchar', 'length' => 100),
+      'im'                  => array('type' => 'varchar', 'length' => 100),
+      'user_uid'            => array('type' => 'int'),
+    ),
+    'primary key' => array('vid', 'nid'),
+  );
+
+  return $schema;
+}

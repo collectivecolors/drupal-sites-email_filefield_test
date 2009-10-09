@@ -1,0 +1,19 @@
+; $Id: stormteammember.info,v 1.1.2.3 2009/05/06 19:11:26 magnity Exp $
+name = Storm Team member
+description = "Allows adding persons to teams for specific projects, tasks or tickets"
+dependencies[] = storm 
+dependencies[] = stormattribute
+dependencies[] = stormorganization
+dependencies[] = stormproject
+dependencies[] = stormtask
+dependencies[] = stormticket
+dependencies[] = stormperson
+package = Storm
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-08-21
+version = "6.x-1.24"
+core = "6.x"
+project = "storm"
+datestamp = "1250814081"
+

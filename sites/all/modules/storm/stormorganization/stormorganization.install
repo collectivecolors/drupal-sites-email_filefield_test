@@ -1,0 +1,68 @@
+<?php
+// $Id: stormorganization.install,v 1.4.4.5 2009/07/10 14:52:17 magnity Exp $
+
+/**
+ * @file
+ */
+
+function stormorganization_install() {
+  drupal_install_schema('stormorganization');
+  variable_set('node_options_stormorganization', array('status'));
+}
+
+function stormorganization_disable() {
+  drupal_set_message(t('Warning: Nodes of type "Organization" have not been deleted on disabling Storm Organization. Please note that they will now have reduced functionality, and will not be protected by Storm Organization access controls.', 'warning'));
+}
+
+function stormorganization_uninstall() {
+  drupal_uninstall_schema('stormorganization');
+}
+
+function stormorganization_schema() {
+  $schema['stormorganization'] = array(
+    'fields'        => array(
+      'vid'         => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'nid'         => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'prefix'      => array('type' => 'varchar', 'length' => 100),
+      'fullname'    => array('type' => 'varchar', 'length' => 100),
+      'country'     => array('type' => 'varchar', 'length' => 100),
+      'orglanguage' => array('type' => 'varchar', 'length' => 20),
+      'provstate'   => array('type' => 'varchar', 'length' => 50),
+      'city'        => array('type' => 'varchar', 'length' => 100),
+      'zip'         => array('type' => 'varchar', 'length' => 10),
+      'address'     => array('type' => 'varchar', 'length' => 100),
+      'taxid'       => array('type' => 'varchar', 'length' => 50),
+      'email'       => array('type' => 'varchar', 'length' => 50),
+      'www'         => array('type' => 'varchar', 'length' => 100),
+      'phone'       => array('type' => 'varchar', 'length' => 100),
+      'currency'    => array('type' => 'varchar', 'length' => 20),
+      'iscustomer'  => array('type' => 'int', 'default' => 1),
+      'isprovider'  => array('type' => 'int', 'default' => 0),
+      'isactive'    => array('type' => 'int', 'default' => 1),
+    ),
+    'primary key' => array('vid', 'nid'),
+  );
+
+  return $schema;
+}
+
+function stormorganization_update_1() {
+  $ret = array();
+  db_add_field($ret, 'stormorganization', 'iscustomer', array('type' => 'int', 'default' => 1));
+  db_add_field($ret, 'stormorganization', 'isprovider', array('type' => 'int', 'default' => 0));
+  db_add_field($ret, 'stormorganization', 'isactive', array('type' => 'int', 'default' => 1));
+  return $ret;
+}
+
+function stormorganization_update_2() {
+  $ret = array();
+  db_change_field($ret, 'stormorganization', 'vatid', 'taxid', array('type' => 'varchar', 'length' => 50));
+  return $ret;
+}
+
+function stormorganization_update_3() {
+  $ret = array();
+  db_query('UPDATE {stormorganization} SET iscustomer=1, isprovider=1, isactive=1');
+  return $ret;
+}
+

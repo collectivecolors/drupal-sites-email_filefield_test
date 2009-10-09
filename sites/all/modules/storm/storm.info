@@ -1,0 +1,12 @@
+; $Id: storm.info,v 1.3.4.2 2009/07/29 22:42:24 magnity Exp $
+name = Storm
+description = "Project Management Application (base module - utility for other Storm modules)."
+core = 6.x
+package = Storm
+
+; Information added by drupal.org packaging script on 2009-08-21
+version = "6.x-1.24"
+core = "6.x"
+project = "storm"
+datestamp = "1250814081"
+

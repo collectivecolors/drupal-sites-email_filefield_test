@@ -1,0 +1,39 @@
+<?php
+// $Id: stormknowledgebase.install,v 1.1.4.3 2009/07/10 14:56:02 magnity Exp $
+
+/**
+ * @file
+ */
+
+function stormknowledgebase_install() {
+  drupal_install_schema('stormknowledgebase');
+  variable_set('node_options_stormknowledgebase', array('status'));
+}
+
+function stormknowledgebase_disable() {
+  drupal_set_message(t('Warning: Nodes of type "Knowledgebase" have not been deleted on disabling Storm Knowledgebase. Please note that they will now have reduced functionality, and will not be protected by Storm Knowledgebase access controls.', 'warning'));
+}
+
+function stormknowledgebase_uninstall() {
+  drupal_uninstall_schema('stormknowledgebase');
+}
+
+function stormknowledgebase_schema() {
+  $schema['stormknowledgebase'] = array(
+    'fields' => array(
+      'vid' => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'nid' => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'topic' => array('type' => 'varchar', 'length' => 20),
+    ),
+    'primary key' => array('vid', 'nid'),
+  );
+
+  return $schema;
+}
+
+function stormknowledgebase_update_1() {
+  drupal_install_schema('stormknowledgebase');
+
+  $ret = array();
+  return $ret;
+}

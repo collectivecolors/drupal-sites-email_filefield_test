@@ -1,0 +1,64 @@
+<?php
+// $Id: stormproject.install,v 1.2.4.7 2009/07/10 14:48:36 magnity Exp $
+
+/**
+ * @file
+ */
+
+function stormproject_install() {
+  drupal_install_schema('stormproject');
+  variable_set('node_options_stormproject', array('status'));
+}
+
+function stormproject_disable() {
+  drupal_set_message(t('Warning: Nodes of type "Project" have not been deleted on disabling Storm Project. Please note that they will now have reduced functionality, and will not be protected by Storm Project access controls.', 'warning'));
+}
+
+function stormproject_uninstall() {
+  drupal_uninstall_schema('stormproject');
+}
+
+function stormproject_schema() {
+  $schema['stormproject'] = array(
+    'fields'                => array(
+      'vid'                 => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'nid'                 => array('type' => 'int', 'not null' => TRUE, 'default' => 0),
+      'organization_nid'    => array('type' => 'int'),
+      'organization_title'  => array('type' => 'varchar', 'length' => 100),
+      'projectstatus'       => array('type' => 'varchar', 'length' => 20),
+      'projectcategory'     => array('type' => 'varchar', 'length' => 20),
+      'projectpriority'     => array('type' => 'varchar', 'length' => 20),
+      'pricemode'           => array('type' => 'varchar', 'length' => 20),
+      'price'               => array('type' => 'float'),
+      'currency'            => array('type' => 'varchar', 'length' => 20),
+      'datebegin'           => array('type' => 'int', 'default' => 0),
+      'dateend'             => array('type' => 'int', 'default' => 0),
+      'durationunit'        => array('type' => 'varchar', 'length' => 20),
+      'duration'            => array('type' => 'float', 'default' => 0),
+    ),
+    'primary key' => array('vid', 'nid'),
+  );
+
+  return $schema;
+}
+
+function stormproject_update_1() {
+  $ret = array();
+  db_add_field($ret, 'stormproject', 'projectpriority', array('type' => 'varchar', 'length' => 20));
+  return $ret;
+}
+
+function stormproject_update_2() {
+  $ret = array();
+  db_add_field($ret, 'stormproject', 'datebegin', array('type' => 'int', 'default' => 0));
+  db_add_field($ret, 'stormproject', 'dateend', array('type' => 'int', 'default' => 0));
+  return $ret;
+}
+
+function stormproject_update_3() {
+  $ret = array();
+  db_add_field($ret, 'stormproject', 'durationunit', array('type' => 'varchar', 'length' => 20));
+  db_add_field($ret, 'stormproject', 'duration', array('type' => 'float', 'default' => 0));
+  return $ret;
+}
+

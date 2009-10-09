@@ -1,0 +1,59 @@
+/* $Id: CHANGELOG.txt,v 1.1.2.42 2009/08/20 23:56:22 magnity Exp $ */
+
+Version 6.x-1.24:
+- Bug 547040: Unknown column 'sin.organization_nid'
+- Feature #539838: Additional views functionality
+- Feature #301301: Timetracker -> Invoice
+- Bug #535120: Multiple php errors when viewing expense report
+- Feature #311855: Compound tax
+- Feature #468294: Integration of Popups API
+- Feature #530080: Additional views functionality
+- Bug #526926: Tasks filter by project returned empty list
+- Feature #527768: Additional links on node view, refactor of links code.
+- Feature #297775: Gantt charts
+(added as experimental feature - some refinement is still needed)
+- Bug #340954: Fixed use of revisions in some modules
+- Bug #477602: Add warning about remaining nodes on module disabling
+- Bug #510056: Domain key shown instead of domain value in ticket display
+- Feature #450360: Email invoicing
+- Bug #469004: Teammember list does not show persons assigned
+- Bug #377972: SQL warning when combined with i18n module
+- Bug #500876: Fixed error when filering views by Storm Attributes values
+
+Version 6.x-1.23:
+- Feature #334396: Adding create ticket link to task node view (plus style changes on links on right hand side of node views)
+- Task #436922: Storm Invoice Items module removed (functionality now within Storm Invoice)
+- Bug #495512: Ticket list filter reset does not reset category
+- Bug #300933: For new installations, Storm Expenses default to not promoted to front page
+- Bug #495070: Dashboard does not pay attention to permissions
+- Bug #478022: Add workaround to avoid SQL error with some menu modules
+- Feature #329401: Display invoice items on view invoice page
+- Feature #325363: Ticket - more fields visible on node view
+- Bug #469002: Teammember - assigned person not remembered after save
+- Bug #450778: Invoice - allow editting of invoice amount fields
+- Task #456164: Added variable for location of tcpdf library plus check of existance. Defaults now to sites/all/libraries.
+- Bug #460472: Knowledgebase topics not displayed, plus similar bug for organization countries
+- Bug #433300: Can't cancel attribute creation - removed code
+- Feature #348777: Organization Phone Number
+- Feature #320801: Exposed Storm fields to views
+- Bug #436382: Wysiwyg doesn't show up on timetracking
+- Bug #454412: Knowledge Base - allow filtering by non-default attributes
+- Task #436922: Removed add_js on init from Storm Invoice Items.
+- Task #436922: Storm Invoice Items permissions moved to Storm Invoice
+- Improved module descriptions
+- Bug #450648: Documentation updated to mention conflict with node access modules
+
+Version 6.x-1.22:
+- Bug #433300: Can't cancel attribute creation - disabled function (temporary fix)
+- Bug #343818: Title field displayed below body when CCK enabled
+- Bug #432148: PHP warning due to invalid argument supplied
+- Documentation updated and extended
+- Code style changes as per Drupal Coding Standards
+- CVS headers added to all files
+
+Version 6.x-1.21:
+- Active and default settings for attributes
+- Addition of documentation
+- Bug fixes
+
+[Changelog begins at version 6.x-1.20]

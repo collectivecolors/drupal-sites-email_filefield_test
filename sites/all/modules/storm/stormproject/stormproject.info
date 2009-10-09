@@ -1,0 +1,15 @@
+; $Id: stormproject.info,v 1.4.4.1 2009/05/06 19:08:57 magnity Exp $
+name = Storm Project
+description = "Allows recording of projects based on Storm Organizations"
+dependencies[] = storm 
+dependencies[] = stormattribute
+dependencies[] = stormorganization
+package = Storm
+core = 6.x
+
+; Information added by drupal.org packaging script on 2009-08-21
+version = "6.x-1.24"
+core = "6.x"
+project = "storm"
+datestamp = "1250814081"
+

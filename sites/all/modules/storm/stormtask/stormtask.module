@@ -1,0 +1,787 @@
+<?php
+// $Id: stormtask.module,v 1.6.4.42 2009/08/04 23:00:18 magnity Exp $
+
+/**
+ * @file
+ */
+
+function stormtask_help($path, $arg) {
+  $o = '';
+
+  switch ($path) {
+    case "admin/help#stormtask":
+      $o = '<p>'. t("Provides task support for Storm") .'</p>';
+      break;
+  }
+
+  return $o;
+}
+
+function stormtask_perm() {
+  return array(
+    'Storm task: access',
+    'Storm task: add',
+    'Storm task: delete all',
+    'Storm task: delete own',
+    'Storm task: delete of user organization',
+    'Storm task: edit all',
+    'Storm task: edit own',
+    'Storm task: edit of user organization',
+    'Storm task: view all',
+    'Storm task: view own',
+    'Storm task: view of user organization',
+  );
+}
+
+function stormtask_init() {
+  $settings = array(
+    'storm' => array(
+      'project_tasks_url' => url('storm/project_tasks_js/')
+    ),
+  );
+  drupal_add_js($settings, 'setting');
+  drupal_add_js(drupal_get_path('module', 'stormtask') .'/stormtask.js', 'module', 'header', FALSE);
+}
+
+function stormtask_access($op, $node, $account=NULL) {
+  if (empty($account)) {
+    global $user;
+    $account = $user;
+  }
+
+  if (is_numeric($node)) $node = node_load($node);
+
+  if ($op == 'create') {
+    return user_access('Storm task: add');
+  }
+
+  if ($op == 'delete') {
+    if (user_access('Storm task: delete all')) {
+      return TRUE;
+    }
+    else if (user_access('Storm task: delete own') && ($account->uid == $node->uid)) {
+      return TRUE;
+    }
+    else if (user_access('Storm task: delete of user organization') && ($account->stormorganization_nid == $node->organization_nid)) {
+      return TRUE;
+    }
+  }
+
+  if ($op == 'update') {
+    if (user_access('Storm task: edit all')) {
+      return TRUE;
+    }
+    else if (user_access('Storm task: edit own') && ($account->uid == $node->uid)) {
+      return TRUE;
+    }
+    else if (user_access('Storm task: edit of user organization') && ($account->stormorganization_nid == $node->organization_nid)) {
+      return TRUE;
+    }
+  }
+
+  if ($op == 'view') {
+    if (user_access('Storm task: view all')) {
+      return TRUE;
+    }
+    else if (user_access('Storm task: view own') && ($account->uid == $node->uid)) {
+      return TRUE;
+    }
+    else if (user_access('Storm task: view of user organization') && ($account->stormorganization_nid == $node->organization_nid)) {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+function stormtask_access_sql($sql, $where = array()) {
+  if (user_access('Storm task: view all')) {
+    $where[] = "'storm_access'='storm_access'";
+    return storm_rewrite_sql($sql, $where);
+  }
+
+  global $user;
+
+  $cond = '';
+  if (user_access('Storm task: view own')) {
+    $cond .= 'n.uid='. $user->uid;
+  }
+  if (user_access('Storm task: view of user organization')) {
+    if (!empty($cond)) $cond .= ' OR ';
+    $cond .= 'sta.organization_nid='. $user->stormorganization_nid;
+  }
+  if (empty($cond)) $cond = '0=1';
+  $where[] = $cond;
+
+  $where[] = "'storm_access'='storm_access'";
+  return storm_rewrite_sql($sql, $where);
+}
+
+function stormtask_storm_rewrite_where_sql($query, $primary_table, $account) {
+  static $conds = array();
+
+  if ($conds[$primary_table][$account->uid]) {
+    return $conds[$primary_table][$account->uid];
+  }
+
+  if (preg_match("/'storm_access'='storm_access'/", $query)) {
+    $cond = '';
+  }
+  else {
+    if (user_access('Storm task: view all', $account)) {
+      return '';
+    }
+
+    $cond = '';
+    if (user_access('Storm task: view own', $account)) {
+      $cond .= " ${primary_table}.uid=". $account->uid;
+    }
+    if (user_access('Storm task: view of user organization', $account)) {
+      if ($cond) {
+        $cond .= ' OR ';
+      }
+      // If function is called without viewing a task, this variable may not be set.
+      // These lines check for that and set the organization node id to zero if not otherwise set.
+      if (!isset($account->stormorganization_nid)) {
+        $account->stormorganization_nid = 0;
+      }
+      $cond .= ' sta1.organization_nid='. $account->stormorganization_nid;
+    }
+    if ($cond) {
+      $cond = " WHEN 'stormtask' THEN (SELECT IF($cond,1,0) FROM {stormtask} sta1 WHERE sta1.vid=${primary_table}.vid) ";
+    }
+    else {
+      $cond = " WHEN 'stormtask' THEN 0 ";
+    }
+  }
+
+  $conds[$primary_table][$account->uid] = $cond;
+  return $cond;
+}
+
+function stormtask_menu() {
+  $items['node/%node/tasks'] = array(
+    'title' => t('Tasks'),
+    'page callback' => 'stormtask_tasks',
+    'page arguments' => array(1),
+    'access callback' => '_stormtask_tasks_access',
+    'access arguments' => array(1),
+    'file' => 'stormtask.admin.inc',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 4
+  );
+  $items['storm/project_tasks_js/%'] = array(
+    'title' => t('Tasks'),
+    'page callback' => '_stormtask_project_tasks_js',
+    'page arguments' => array(2),
+    'access arguments' => array('Storm task: access'),
+    'file' => 'stormtask.admin.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['storm/tasks'] = array(
+    'title' => t('Tasks'),
+    'description' => t('Storm Tasks'),
+    'page callback' => 'stormtask_list',
+    'access arguments' => array('Storm task: access'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'stormtask.admin.inc',
+  );
+  
+  $items['admin/storm/task'] = array(
+    'title' => t('Storm Task'),
+    'description' => t('Storm Task Administration Page'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('stormtask_admin_settings'),
+    'access arguments' => array('Storm: access administration pages'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+
+function stormtask_admin_settings() {
+  $form = array();
+  
+  $form['stormtask_enable_ganttchart'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable Gantt Charts (experimental feature)'),
+    '#default_value' => variable_get('stormtask_enable_ganttchart', False),
+    //'#description' => t('First get jsgantt.zip from http://jsgantt.com and put jsgantt.js andf jsgantt.css in directory   <i>sites/all/libraries/jsgantt</i> then enable this checkbox.'),
+  );
+
+  /*$form['stormtask_jsgantt_location'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Location of jsgantt library'),
+    '#default_value' => variable_get('stormtask_jsgantt_location', t('sites/all/libraries/jsgantt')),
+    '#description' => t('The directory that contains the jsgantt library ( sites/all/libraries/jsgantt is recommended )'),
+    '#size' => 50,
+    '#after_build' => array('jsgantt_check_directory'),
+  );*/
+
+
+  $form['stormtask_jsgantt_options'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Chart display options'),
+    '#default_value' => variable_get('stormtask_jsgantt_options', array('ShowStartDate','ShowEndDate','ShowDur')),
+    '#options' => array(
+      'ShowStartDate' => t('Show Start Date'),
+      'ShowEndDate' => t('Show End Date'),
+      'ShowDur' => t('Show Duration'),
+    ),
+    '#description' => t('Choose display options for gantt chart.'),
+  );
+
+
+  $form['stormtask_jsgantt_color'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Gantt chart default color'),
+    '#default_value' => variable_get('stormtask_jsgantt_color', '666666'),
+    '#description' => t('Enter default color for gantt chart bars.'),
+    '#size' => 6,
+  );
+  $form['stormtask_jsgantt_color_completed'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Gantt chart "completed" color'),
+    '#default_value' => variable_get('stormtask_jsgantt_color_completed', '0DFF24'),
+    '#description' => t('Enter "completed" color for gantt chart bars.'),
+    '#size' => 6,
+  );
+  $form['stormtask_jsgantt_color_in_progress'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Gantt chart "in progress" color'),
+    '#default_value' => variable_get('stormtask_jsgantt_color_in_progress', '00CCFF'),
+    '#description' => t('Enter "in progress" color for gantt chart bars.'),
+    '#size' => 6,
+  );
+  $form['stormtask_jsgantt_color_on_hold'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Gantt chart "on hold" color'),
+    '#default_value' => variable_get('stormtask_jsgantt_color_on_hold', 'FFF60D'),
+    '#description' => t('Enter "on hold" color for gantt chart bars.'),
+    '#size' => 6,
+  );
+  $form['stormtask_jsgantt_color_overdue'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Gantt chart "overdue" color'),
+    '#default_value' => variable_get('stormtask_jsgantt_color_overdue', 'FF0D0D'),
+    '#description' => t('Enter "overdue" color for gantt chart bars.'),    '#size' => 6,
+  );
+
+  return system_settings_form($form);
+}
+
+function jsgantt_check_directory($form_element) {
+  $file = $form_element['#value']."/jsgantt.js";
+  if (!file_exists($file)){
+     form_set_error($form_element['#name'], t('The file %file does not exist.', array('%file' => $file)));
+  }
+  return $form_element;
+}
+
+
+function stormtask_theme() {
+  return array(
+    'stormtask_list' => array(
+      'file'      => 'stormtask.theme.inc',
+      'arguments' => array('header', 'tasks'),
+    ),
+    'stormtask_tasks' => array(
+      'file'      => 'stormtask.theme.inc',
+      'arguments' => array('form'),
+    ),
+    'stormtask_view' => array(
+      'file'      => 'stormtask.theme.inc',
+      'arguments' => array('node', 'teaser', 'page'),
+    ),
+  );
+}
+
+function stormtask_node_info() {
+  return array(
+    'stormtask' => array(
+      'name' => t('Task'),
+      'module' => 'stormtask',
+      'description' => t("A task for Storm."),
+      'title_label' => t("Title"),
+      'body_label' => t("Description"),
+    )
+  );
+}
+
+function stormtask_stormorganization_change($organization_nid, $organization_title) {
+  $s = "UPDATE {stormtask} SET organization_title='%s' WHERE organization_nid=%d AND organization_title <> '%s'";
+  db_query($s, $organization_title, $organization_nid, $organization_title);
+}
+
+function stormtask_stormproject_change($project_nid, $project_title) {
+  $s = "UPDATE {stormtask} SET project_title='%s' WHERE project_nid=%d AND project_title <> '%s'";
+  db_query($s, $project_title, $project_nid, $project_title);
+}
+
+function stormtask_form(&$node) {
+  $breadcrumb = array();
+  $breadcrumb[] = l(t('Storm'), 'storm');
+
+  if (array_key_exists('project_nid', $_GET)) {
+    $breadcrumb[] = l(t('Projects'), 'storm/projects');
+    $project = node_load($_GET['project_nid']);
+    $breadcrumb[] = l(t('Project : '. $project->title), 'node/'. $project->nid);
+    $breadcrumb[] = l(t('Tasks'), 'node/'. $project->nid .'/tasks');
+  }
+  else {
+    $breadcrumb[] = l(t('Tasks'), 'storm/tasks');
+  }
+
+  drupal_set_breadcrumb($breadcrumb);
+
+  if (arg(1)=='add') {
+    $node->datebegin = time();
+    $node->dateend = time();
+
+    if (array_key_exists('organization_nid', $_GET) && !$node->organization_nid) {
+      $node->organization_nid = $_GET['organization_nid'];
+    }
+    if (array_key_exists('project_nid', $_GET) && !$node->project_nid) {
+      $node->project_nid = $_GET['project_nid'];
+      $p = node_load($node->project_nid);
+      $node->organization_nid = $p->organization_nid;
+    }
+
+    if (array_key_exists('parent_nid', $_GET) && !$node->parent_nid) {
+      $node->parent_nid = $_GET['parent_nid'];
+    }
+
+    if ($_SESSION['stormtask_list_filter']['organization_nid'] && !$node->organization_nid) {
+      $node->organization_nid = $_SESSION['stormtask_list_filter']['organization_nid'];
+    }
+    if ($_SESSION['stormtask_list_filter']['project_nid'] && !$node->project_nid) {
+      $node->project_nid = $_SESSION['stormtask_list_filter']['project_nid'];
+    }
+    $s_org = "SELECT n.nid, n.title FROM {stormorganization} so INNER JOIN {node} n 
+              ON so.nid=n.nid WHERE n.status=1 AND so.isactive=1 AND so.iscustomer=1 AND n.type='stormorganization' ORDER BY n.title";
+  }
+  else {
+    $s_org = "SELECT n.nid, n.title FROM {stormorganization} so INNER JOIN {node} n 
+      ON so.nid=n.nid WHERE n.status=1 AND so.iscustomer=1 AND n.type='stormorganization' ORDER BY n.title";
+  }
+
+  $type = node_get_types('type', $node);
+
+  $form['#attributes']['class'] = 'stormcomponent_node_form';
+
+  $form['group1'] = array(
+    '#type' => 'markup',
+    '#theme' => 'storm_form_group',
+    '#weight' => -50,
+  );
+
+  $s_org = stormorganization_access_sql($s_org);
+  $s_org = db_rewrite_sql($s_org);
+  $r = db_query($s_org);
+  $organizations = array();
+  while ($organization = db_fetch_object($r)) {
+    $organizations[$organization->nid] = $organization->title;
+    if (!$node->organization_nid) $node->organization_nid = $organization->nid;
+  }
+  $form['group1']['organization_nid'] = array(
+    '#type' => 'select',
+    '#title' => t('Organization'),
+    '#default_value' => $node->organization_nid,
+    '#options' => $organizations,
+    '#required' => true,
+    '#attributes' => array('onchange' => "stormtask_organization_project_tasks(this, 'edit-project-nid', 'edit-parent-nid', true, '-')"),
+  );
+
+  $s = "SELECT n.nid, n.title FROM {node} AS n INNER JOIN {stormproject} AS spr ON spr.vid=n.vid
+  WHERE n.status=1 AND spr.organization_nid=%d AND n.type='stormproject' ORDER BY n.title";
+  $s = stormproject_access_sql($s);
+  $s = db_rewrite_sql($s);
+  $r = db_query($s, $node->organization_nid);
+  $projects = array();
+  while ($project = db_fetch_object($r)) {
+    $projects[$project->nid] = $project->title;
+    if (!$node->project_nid) $node->project_nid = $project->nid;
+  }
+  $form['group1']['project_nid'] = array(
+    '#type' => 'select',
+    '#title' => t('Project'),
+    '#default_value' => $node->project_nid,
+    '#options' => $projects,
+    '#process' => array('storm_dependent_select_process'),
+    '#required' => true,
+    '#attributes' => array('onchange' => "stormtask_project_tasks(this, 'edit-parent-nid', true, '-')"),
+  );
+
+  $tree = _stormtask_get_tree($node->project_nid);
+  $parent_tasks = _stormtask_plain_tree($tree);
+  $form['group1']['parent_nid'] = array(
+    '#type' => 'select',
+    '#title' => t('Parent task'),
+    '#default_value' => $node->parent_nid,
+    '#options' => array(0 => '-') + $parent_tasks,
+    '#process' => array('storm_dependent_select_process'),
+  );
+
+  $form['group1']['weight'] = array(
+    '#type' => 'weight',
+    '#title' => t('Weight'),
+    '#default_value' => $node->weight,
+  );
+
+  $form['group2'] = array(
+    '#type' => 'markup',
+    '#theme' => 'storm_form_group',
+    '#weight' => -49,
+  );
+
+  $form['group2']['stepno'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Step no.'),
+    '#size' => 15,
+    '#required' => FALSE,
+    '#default_value' => $node->stepno,
+  );
+
+  $form['group2']['title'] = array(
+    '#type' => 'textfield',
+    '#title' => check_plain($type->title_label),
+    '#required' => TRUE,
+    '#default_value' => $node->title,
+  );
+
+  $form['group3'] = array(
+    '#type' => 'markup',
+    '#theme' => 'storm_form_group',
+    '#weight' => -48,
+  );
+
+  $taskcategory_list = stormattribute_attributes_bydomain('Task category');
+  $form['group3']['taskcategory'] = array(
+    '#type' => 'select',
+    '#title' => t('Category'),
+    '#default_value' => $node->taskcategory,
+    '#options' => $taskcategory_list['values'],
+  );
+
+  $taskstatus_list = stormattribute_attributes_bydomain('Task status');
+  $form['group3']['taskstatus'] = array(
+    '#type' => 'select',
+    '#title' => t('Status'),
+    '#default_value' => $node->taskstatus,
+    '#options' => $taskstatus_list['values'],
+  );
+
+  $taskpriority_list = stormattribute_attributes_bydomain('Task priority');
+  $form['group3']['taskpriority'] = array(
+    '#type' => 'select',
+    '#title' => t('Priority'),
+    '#default_value' => $node->taskpriority,
+    '#options' => $taskpriority_list['values'],
+  );
+
+  $form['group4'] = array(
+    '#type' => 'markup',
+    '#theme' => 'storm_form_group',
+    '#weight' => -47,
+  );
+
+  $form['group4']['datebegin'] = array(
+    '#type' => 'dateext',
+    '#title' => t('Date begin'),
+    '#withnull' => true,
+    '#default_value' => _storm_gmtimestamp_to_date($node->datebegin),
+  );
+
+  $form['group4']['dateend'] = array(
+    '#type' => 'dateext',
+    '#title' => t('Date end'),
+    '#withnull' => true,
+    '#default_value' => _storm_gmtimestamp_to_date($node->dateend),
+  );
+
+  $durationunit_list = stormattribute_attributes_bydomain('Duration unit');
+  $form['group4']['durationunit'] = array(
+    '#type' => 'select',
+    '#title' => t('Duration unit'),
+    '#default_value' => $node->durationunit,
+    '#options' => $durationunit_list['values'],
+  );
+
+  $form['group4']['duration'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Duration'),
+    '#size' => 20,
+    '#default_value' => $node->duration,
+  );
+
+  $form['group5'] = array(
+    '#type' => 'markup',
+    '#theme' => 'storm_form_group',
+    '#weight' => -45,
+  );
+
+  $pricemode_list = stormattribute_attributes_bydomain('Price mode');
+  $form['group5']['pricemode'] = array(
+    '#type' => 'select',
+    '#title' => t('Price mode'),
+    '#default_value' => $node->pricemode,
+    '#options' => $pricemode_list['values'],
+  );
+
+  $form['group5']['price'] = array(
+    '#title' => t('Price'),
+    '#type' => 'textfield',
+    '#size' => 15,
+    '#default_value' => $node->price,
+  );
+
+  $currency_list = stormattribute_attributes_bydomain('Currency');
+  $form['group5']['currency'] = array(
+    '#type' => 'select',
+    '#title' => t('Price currency'),
+    '#default_value' => $node->currency,
+    '#options' => $currency_list['values'],
+  );
+
+  if ($type->has_body) {
+    $form['body_filter']['#weight'] = -44;
+    $form['body_filter']['body'] = array(
+      '#type' => 'textarea',
+      '#title' => check_plain($type->body_label),
+      '#default_value' => $node->body,
+      '#rows' => 20,
+      '#required' => ($type->min_word_count > 0),
+    );
+    $form['body_filter']['format'] = filter_form($node->format);
+  }
+
+  $form['stepno_old'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $node->stepno_old,
+  );
+
+  $form['title_old'] = array(
+    '#type' => 'hidden',
+    '#default_value' => $node->title_old,
+  );
+
+  return $form;
+}
+
+
+function stormtask_form_alter(&$form, $form_state, $form_id) {
+  if (module_exists('date_api') && module_exists('date_popup')) {
+    if ($form_id == 'stormtask_node_form') {
+      $node = $form['#node'];
+      $form['group4']['datebegin'] = array(
+        '#type' => 'date_popup',
+        '#title' => t('Date begin'),
+        '#date_format' =>  'Y-m-d',
+        '#default_value' => date('Y-m-d',$node->datebegin),
+      );
+
+      $form['group4']['dateend'] = array(
+        '#type' => 'date_popup',
+        '#title' => t('Date end'),
+        '#date_format' =>  'Y-m-d',
+        '#default_value' => date('Y-m-d',$node->dateend),
+      );
+    }
+  }
+}
+
+
+function stormtask_insert($node) {
+  _stormtask_beforesave($node);
+  db_query("INSERT INTO {stormtask}
+    (vid, nid, stepno, taskcategory, taskstatus, taskpriority,
+    organization_nid, organization_title,
+    project_nid, project_title, parent_nid, weight,
+    datebegin, dateend, durationunit, duration, pricemode, price, currency)
+    VALUES
+    (%d, %d, '%s', '%s', '%s', '%s',
+    %d, '%s',
+    %d, '%s', %d, %d, %d, %d, '%s', %f, '%s', %f, '%s')",
+    $node->vid, $node->nid, $node->stepno, $node->taskcategory, $node->taskstatus, $node->taskpriority,
+    $node->organization_nid, $node->organization_title, $node->project_nid, $node->project_title,
+    $node->parent_nid, $node->weight, $node->datebegin, $node->dateend, $node->durationunit, $node->duration,
+    $node->pricemode, $node->price, $node->currency);
+}
+
+function stormtask_update($node) {
+  // if this is a new node or we're adding a new revision,
+  if ($node->revision) {
+    stormtask_insert($node);
+  }
+  else {
+    _stormtask_beforesave($node);
+    db_query("UPDATE {stormtask} SET
+      stepno='%s', taskcategory='%s', taskstatus='%s', taskpriority='%s',
+      organization_nid=%d, organization_title='%s',
+      project_nid=%d, project_title='%s',
+      parent_nid=%d, weight=%d, datebegin=%d, dateend=%d, durationunit='%s', duration=%f,
+      pricemode='%s', price=%f, currency='%s' 
+      WHERE vid = %d",
+      $node->stepno, $node->taskcategory, $node->taskstatus, $node->taskpriority,
+      $node->organization_nid, $node->organization_title,
+      $node->project_nid, $node->project_title,
+      $node->parent_nid,
+      $node->weight, $node->datebegin, $node->dateend, $node->durationunit, $node->duration, 
+      $node->pricemode, $node->price, $node->currency, $node->vid);
+    if (($node->title != $node->title_old) || ($node->stepno != $node->stepno_old)) {
+      module_invoke_all('stormtask_change', $node->nid, $node->stepno, $node->title);
+    }
+  }
+}
+
+function _stormtask_beforesave(&$node) {
+  $s = "SELECT n.title FROM {node} n INNER JOIN {stormorganization} o ON n.nid=o.nid
+        WHERE type='stormorganization' AND n.nid=%d";
+  $r = db_query($s, $node->organization_nid);
+  $o = db_fetch_object($r);
+  $node->organization_title = $o->title;
+
+  $s = "SELECT n.title, p.organization_title FROM {node} n INNER JOIN {stormproject} p ON n.nid=p.nid
+        WHERE type='stormproject' AND n.nid=%d";
+  $r = db_query($s, $node->project_nid);
+  $p = db_fetch_object($r);
+  $node->project_title = $p->title;
+
+  if (is_array($node->datebegin)){
+      $node->datebegin = _storm_date_to_gmtimestamp($node->datebegin);
+  }
+  else {
+      $node->datebegin = strtotime($node->datebegin);
+  }
+ 
+  if (is_array($node->dateend)){
+      $node->dateend = _storm_date_to_gmtimestamp($node->dateend);
+  }
+  else {
+      $node->dateend = strtotime($node->dateend);
+  }
+}
+
+function stormtask_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'prepare':
+      if(!$node->nid) {
+        $node->iscustomer = 1;
+        $node->isactive = 1;
+
+        $taskcategory_list = stormattribute_attributes_bydomain('Task category');
+        $node->taskcategory = $taskcategory_list['default'];
+
+        $taskstatus_list = stormattribute_attributes_bydomain('Task status');
+        $node->taskstatus = $taskstatus_list['default'];
+
+        $taskpriority_list = stormattribute_attributes_bydomain('Task priority');
+        $node->taskpriority = $taskpriority_list['default'];
+
+        $durationunit_list = stormattribute_attributes_bydomain('Duration unit');
+        $node->durationunit = $durationunit_list['default'];
+
+        $pricemode_list = stormattribute_attributes_bydomain('Price mode');
+        $node->pricemode = $pricemode_list['default'];
+
+        $currency_list = stormattribute_attributes_bydomain('Currency');
+        $node->currency = $pricemode_list['currency'];
+      }
+      break;
+    case 'delete revision':
+      // Notice that we're matching a single revision based on the node's vid.
+      db_query('DELETE FROM {stormtask} WHERE vid = %d', $node->vid);
+      break;
+  }
+}
+
+function stormtask_delete($node) {
+  // Notice that we're matching all revision, by using the node's nid.
+  db_query('DELETE FROM {stormtask} WHERE nid = %d', $node->nid);
+}
+
+function stormtask_load($node) {
+  $additions = db_fetch_object(db_query('SELECT * FROM {stormtask} WHERE vid = %d', $node->vid));
+  $additions->stepno_old = $node->stepno;
+  $additions->title_old = $node->title;
+  return $additions;
+}
+
+function stormtask_validate(&$node) {
+  if (($node->nid == $node->parent_nid) && $node->parent_nid) {
+    form_set_error('parent_nid', t('Impossible to assign itself as parent.'));
+  }
+}
+
+function stormtask_view($node, $teaser = FALSE, $page = FALSE) {
+  $breadcrumb = array();
+  $breadcrumb[] = l(t('Storm'), 'storm');
+  $breadcrumb[] = l(t('Tasks'), 'storm/tasks');
+  drupal_set_breadcrumb($breadcrumb);
+
+  return theme('stormtask_view', $node, $teaser, $page);
+}
+
+function _stormtask_tasks_access($node=NULL) {
+  if ($node == NULL) return FALSE;
+  if ($node->type == 'stormproject' && user_access('Storm task: access')) return TRUE;
+  return FALSE;
+}
+
+function _stormtask_get_tree($project_nid, $parent_nid = 0, $depth = -1, $max_depth = NULL, $where = NULL, $args = array()) {
+  static $children, $parents, $tasks;
+
+  $depth++;
+  // We cache trees, so it's not CPU-intensive to call get_tree() on a term
+  // and its children, too.
+  if (!isset($children[$project_nid])) {
+    $children[$project_nid] = array();
+
+    $s = "SELECT n.title, sta.* FROM {node} AS n INNER JOIN {stormtask} AS sta
+    ON n.vid=sta.vid WHERE n.status=1 AND n.type='stormtask' AND sta.project_nid=%d
+    ORDER BY sta.weight";
+    $s = stormtask_access_sql($s, $where);
+    $s = db_rewrite_sql($s);
+    $args = array_merge($args, array($project_nid));
+    $r = db_query($s, $args);
+    while ($task = db_fetch_object($r)) {
+      $children[$project_nid][$task->parent_nid][] = $task->nid;
+      $parents[$project_nid][$task->nid][] = $task->parent_nid;
+      $tasks[$project_nid][$task->nid] = $task;
+    }
+  }
+
+  $max_depth = (is_null($max_depth)) ? count($children[$project_nid]) : $max_depth;
+  if ($children[$project_nid][$parent_nid]) {
+    foreach ($children[$project_nid][$parent_nid] as $child_nid) {
+      if ($max_depth > $depth) {
+        $task = drupal_clone($tasks[$project_nid][$child_nid]);
+        $task->depth = $depth;
+        $task->parents = $parents[$project_nid][$child_nid];
+        $tree[] = $task;
+        if ($children[$project_nid][$child_nid]) {
+          $tree = array_merge($tree, _stormtask_get_tree($project_nid, $child_nid, $depth, $max_depth, $where, $args));
+        }
+      }
+    }
+  }
+  return $tree ? $tree : array();
+}
+
+function _stormtask_plain_tree($tree) {
+  $rows = array();
+  foreach ($tree as $item) {
+    $nid = $item->nid;
+    $title = $item->title;
+    if ($item->stepno) $title = $item->stepno .' '. $title;
+    if ($nid) $rows[$nid] = str_repeat('--', $item->depth) .' '. $title;
+  }
+  return $rows;
+}
+
+function stormtask_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'stormtask'),
+  );
+}

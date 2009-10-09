@@ -1,0 +1,18 @@
+/* $Id: INSTALL.txt,v 1.1.2.5 2009/07/10 15:02:09 magnity Exp $ */
+
+STORM Project Management Module for Drupal 6.x
+
+INSTALLATION:
+
+1) Copy this 'storm' directory into the /sites/all/modules directory of your Drupal installation.
+
+2) Enable STORM and whatever components of STORM that you wish, but visiting http://example.com/admin/build/modules in your web-browser.
+
+3) To enable the pdf invoice feature, you must separately install the tcpdf library (http://www.tcpdf.org). The install directory can be set at /admin/storm/invoice, but you are recommended to use the sites/all/libraries/tcpdf directory. If you do not install the tcpdf library, the core STORM installation will work, but you will not be able to view pdf invoices, instead seeing a warning.
+
+
+DISABLING / UNINSTALL:
+
+1) Visit http://example.com/admin/build/modules in your web-browser and deselect the modules that you wish to disable. To uninstall, select the uninstall tab and follow the on screen instructions.
+
+2) Warnings may appear on disabling stating that nodes have not been deleted. This is because several of the Storm modules use the existing Drupal node system to store information. Therefore, on disabling the module, these nodes are not deleted. It is suggested that you may wish to delete these manually by visiting http://example.com/admin/content/node and filtering by the stated content type.
