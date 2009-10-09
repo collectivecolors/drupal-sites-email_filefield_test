@@ -1,0 +1,8 @@
+# Ignore everything
+*
+
+# But keep the .gitignore file.
+!.gitignore
+
+# And the default settings.php file.
+!default.settings.php
